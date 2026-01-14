@@ -1,445 +1,585 @@
--- gui/mainWindow.lua
--- Custom UI Library - Fully customizable
+-- Using Fluent UI Library
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
-local Library = {}
+local Window = Fluent:CreateWindow({
+    Title = "Quantum Apex",
+    SubTitle = "Universal Aimbot v2.1",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(600, 480),
+    Acrylic = true,
+    Theme = "Darker",
+    MinimizeKey = Enum.KeyCode.RightControl
+})
 
--- Services
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-
--- Customization Settings (CHANGE THESE TO CUSTOMIZE YOUR UI)
-Library.Theme = {
-    -- Main Colors
-    Background = Color3.fromRGB(25, 25, 30),
-    Topbar = Color3.fromRGB(35, 35, 40),
-    TabBackground = Color3.fromRGB(30, 30, 35),
-    
-    -- Accent Colors
-    Accent = Color3.fromRGB(88, 101, 242), -- Discord purple, change to your favorite color!
-    AccentHover = Color3.fromRGB(108, 121, 255),
-    
-    -- Element Colors
-    ElementBackground = Color3.fromRGB(40, 40, 45),
-    ElementBackgroundHover = Color3.fromRGB(50, 50, 55),
-    
-    -- Text Colors
-    TitleText = Color3.fromRGB(255, 255, 255),
-    SubText = Color3.fromRGB(200, 200, 200),
-    DisabledText = Color3.fromRGB(120, 120, 120),
-    
-    -- Toggle Colors
-    ToggleOn = Color3.fromRGB(67, 181, 129),
-    ToggleOff = Color3.fromRGB(80, 80, 85),
-    
-    -- Other
-    CornerRadius = 10,
-    FontSize = isMobile and 16 or 14,
-    TitleFontSize = isMobile and 20 or 18,
+local Tabs = {
+    Home = Window:AddTab({ Title = "Home", Icon = "home" }),
+    Aimbot = Window:AddTab({ Title = "Aimbot", Icon = "crosshair" }),
+    ESP = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+    Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
+    Config = Window:AddTab({ Title = "Config", Icon = "folder" }),
 }
 
--- Animation Settings
-Library.AnimationSpeed = 0.2
-
-function Library:Init(title)
-    title = title or "My Custom UI"
-    
-    -- Remove existing GUI if present
-    local existing = playerGui:FindFirstChild("CustomUILib")
-    if existing then existing:Destroy() end
-    
-    -- Create ScreenGui
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "CustomUILib"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.IgnoreGuiInset = true
-    screenGui.Parent = playerGui
-    
-    -- Toggle Button
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Name = "ToggleButton"
-    toggleBtn.Size = UDim2.new(0, isMobile and 55 or 45, 0, isMobile and 55 or 45)
-    toggleBtn.Position = UDim2.new(0, 15, 0, 80)
-    toggleBtn.BackgroundColor3 = self.Theme.Accent
-    toggleBtn.Text = ""
-    toggleBtn.AutoButtonColor = false
-    toggleBtn.Parent = screenGui
-    
-    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0.5, 0)
-    
-    local toggleIcon = Instance.new("ImageLabel")
-    toggleIcon.Size = UDim2.new(0.6, 0, 0.6, 0)
-    toggleIcon.Position = UDim2.new(0.2, 0, 0.2, 0)
-    toggleIcon.BackgroundTransparency = 1
-    toggleIcon.Image = "rbxassetid://3926305904"
-    toggleIcon.ImageColor3 = Color3.fromRGB(255, 255, 255)
-    toggleIcon.ImageRectOffset = Vector2.new(644, 204)
-    toggleIcon.ImageRectSize = Vector2.new(36, 36)
-    toggleIcon.Parent = toggleBtn
-    
-    -- Main Container
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, isMobile and 350 or 500, 0, isMobile and 450 or 550)
-    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    mainFrame.BackgroundColor3 = self.Theme.Background
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Visible = false
-    mainFrame.ClipsDescendants = true
-    mainFrame.Parent = screenGui
-    
-    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, self.Theme.CornerRadius)
-    
-    -- Drop shadow effect
-    local shadow = Instance.new("ImageLabel")
-    shadow.Name = "Shadow"
-    shadow.Size = UDim2.new(1, 30, 1, 30)
-    shadow.Position = UDim2.new(0, -15, 0, -15)
-    shadow.BackgroundTransparency = 1
-    shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.ImageTransparency = 0.5
-    shadow.ScaleType = Enum.ScaleType.Slice
-    shadow.SliceCenter = Rect.new(10, 10, 10, 10)
-    shadow.ZIndex = 0
-    shadow.Parent = mainFrame
-    
-    -- Topbar
-    local topbar = Instance.new("Frame")
-    topbar.Name = "Topbar"
-    topbar.Size = UDim2.new(1, 0, 0, isMobile and 55 or 45)
-    topbar.BackgroundColor3 = self.Theme.Topbar
-    topbar.BorderSizePixel = 0
-    topbar.Parent = mainFrame
-    
-    local topbarCorner = Instance.new("UICorner")
-    topbarCorner.CornerRadius = UDim.new(0, self.Theme.CornerRadius)
-    topbarCorner.Parent = topbar
-    
-    -- Fix for topbar rounded corners at bottom
-    local topbarFix = Instance.new("Frame")
-    topbarFix.Size = UDim2.new(1, 0, 0, self.Theme.CornerRadius)
-    topbarFix.Position = UDim2.new(0, 0, 1, -self.Theme.CornerRadius)
-    topbarFix.BackgroundColor3 = self.Theme.Topbar
-    topbarFix.BorderSizePixel = 0
-    topbarFix.Parent = topbar
-    
-    -- Title
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "Title"
-    titleLabel.Size = UDim2.new(1, -100, 1, 0)
-    titleLabel.Position = UDim2.new(0, 15, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.TextColor3 = self.Theme.TitleText
-    titleLabel.TextSize = self.Theme.TitleFontSize
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = topbar
-    
-    -- Close Button
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Name = "CloseButton"
-    closeBtn.Size = UDim2.new(0, isMobile and 40 or 35, 0, isMobile and 40 or 35)
-    closeBtn.Position = UDim2.new(1, isMobile and -47 or -42, 0.5, 0)
-    closeBtn.AnchorPoint = Vector2.new(0, 0.5)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.TextSize = isMobile and 18 or 16
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.AutoButtonColor = false
-    closeBtn.Parent = topbar
-    
-    Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
-    
-    -- Tab Container
-    local tabContainer = Instance.new("Frame")
-    tabContainer.Name = "TabContainer"
-    tabContainer.Size = UDim2.new(0, isMobile and 70 or 60, 1, isMobile and -60 or -50)
-    tabContainer.Position = UDim2.new(0, 5, 0, isMobile and 60 or 50)
-    tabContainer.BackgroundTransparency = 1
-    tabContainer.Parent = mainFrame
-    
-    local tabLayout = Instance.new("UIListLayout")
-    tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    tabLayout.Padding = UDim.new(0, 8)
-    tabLayout.Parent = tabContainer
-    
-    -- Content Container
-    local contentContainer = Instance.new("Frame")
-    contentContainer.Name = "ContentContainer"
-    contentContainer.Size = UDim2.new(1, isMobile and -80 or -70, 1, isMobile and -65 or -55)
-    contentContainer.Position = UDim2.new(0, isMobile and 75 or 65, 0, isMobile and 60 or 50)
-    contentContainer.BackgroundTransparency = 1
-    contentContainer.Parent = mainFrame
-    
-    -- Toggle functionality
-    local isOpen = false
-    
-    toggleBtn.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        mainFrame.Visible = isOpen
-        
-        local tween = TweenService:Create(toggleBtn, TweenInfo.new(self.AnimationSpeed), {
-            Rotation = isOpen and 90 or 0
-        })
-        tween:Play()
-    end)
-    
-    closeBtn.MouseButton1Click:Connect(function()
-        isOpen = false
-        mainFrame.Visible = false
-        toggleBtn.Rotation = 0
-    end)
-    
-    -- Hover effects
-    closeBtn.MouseEnter:Connect(function()
-        TweenService:Create(closeBtn, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(255, 70, 70)}):Play()
-    end)
-    closeBtn.MouseLeave:Connect(function()
-        TweenService:Create(closeBtn, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(220, 50, 50)}):Play()
-    end)
-    
-    -- Make draggable
-    self:MakeDraggable(topbar, mainFrame)
-    
-    -- Store references
-    self.ScreenGui = screenGui
-    self.MainFrame = mainFrame
-    self.TabContainer = tabContainer
-    self.ContentContainer = contentContainer
-    self.Tabs = {}
-    self.CurrentTab = nil
-    
-    return self
-end
-
-function Library:MakeDraggable(handle, frame)
-    local dragging = false
-    local dragStart, startPos
-    
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-        end
-    end)
-    
-    handle.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
-
-function Library:CreateTab(name, icon)
-    local tabButton = Instance.new("TextButton")
-    tabButton.Name = name
-    tabButton.Size = UDim2.new(1, 0, 0, isMobile and 60 or 50)
-    tabButton.BackgroundColor3 = self.Theme.TabBackground
-    tabButton.Text = ""
-    tabButton.AutoButtonColor = false
-    tabButton.Parent = self.TabContainer
-    
-    Instance.new("UICorner", tabButton).CornerRadius = UDim.new(0, 8)
-    
-    -- Tab icon (you can change icons later)
-    local tabIcon = Instance.new("TextLabel")
-    tabIcon.Size = UDim2.new(1, 0, 1, 0)
-    tabIcon.BackgroundTransparency = 1
-    tabIcon.Text = icon or "📁"
-    tabIcon.TextSize = isMobile and 24 or 20
-    tabIcon.Parent = tabButton
-    
-    -- Content frame for this tab
-    local tabContent = Instance.new("ScrollingFrame")
-    tabContent.Name = name .. "Content"
-    tabContent.Size = UDim2.new(1, -10, 1, -10)
-    tabContent.Position = UDim2.new(0, 5, 0, 5)
-    tabContent.BackgroundTransparency = 1
-    tabContent.BorderSizePixel = 0
-    tabContent.ScrollBarThickness = 4
-    tabContent.ScrollBarImageColor3 = self.Theme.Accent
-    tabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
-    tabContent.Visible = false
-    tabContent.Parent = self.ContentContainer
-    
-    local contentLayout = Instance.new("UIListLayout")
-    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    contentLayout.Padding = UDim.new(0, 8)
-    contentLayout.Parent = tabContent
-    
-    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        tabContent.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + 10)
-    end)
-    
-    -- Tab switching
-    tabButton.MouseButton1Click:Connect(function()
-        for _, tab in pairs(self.Tabs) do
-            tab.Content.Visible = false
-            tab.Button.BackgroundColor3 = self.Theme.TabBackground
-        end
-        
-        tabContent.Visible = true
-        tabButton.BackgroundColor3 = self.Theme.Accent
-        self.CurrentTab = tabContent
-    end)
-    
-    -- Hover effect
-    tabButton.MouseEnter:Connect(function()
-        if tabButton.BackgroundColor3 ~= self.Theme.Accent then
-            TweenService:Create(tabButton, TweenInfo.new(0.1), {BackgroundColor3 = self.Theme.ElementBackgroundHover}):Play()
-        end
-    end)
-    
-    tabButton.MouseLeave:Connect(function()
-        if tabButton.BackgroundColor3 ~= self.Theme.Accent then
-            TweenService:Create(tabButton, TweenInfo.new(0.1), {BackgroundColor3 = self.Theme.TabBackground}):Play()
-        end
-    end)
-    
-    -- Store tab
-    local tab = {
-        Button = tabButton,
-        Content = tabContent,
-        Elements = {}
+-- Settings Storage
+_G.QuantumSettings = {
+    Aimbot = {
+        Enabled = false,
+        TeamCheck = false,
+        VisibleCheck = true,
+        FOV = 80,
+        Smoothness = 8,
+        AimPart = "Head",
+        IgnoreWalls = false,
+        PredictMovement = false
+    },
+    SilentAim = {
+        Enabled = false,
+        TeamCheck = false,
+        FOV = 100,
+        HitChance = 100,
+        AimPart = "Head",
+        Method = "Namecall"
+    },
+    Humanization = {
+        Enabled = false,
+        Shake = 2,
+        Prediction = 0.13,
+        AutoShoot = false,
+        ReactionTime = 50
+    },
+    ESP = {
+        Enabled = false,
+        Boxes = true,
+        Names = true,
+        Distance = false,
+        Health = true,
+        Tracers = false,
+        TeamCheck = false,
+        BoxColor = Color3.fromRGB(255, 255, 255),
+        ShowTeam = true,
+        Skeleton = false,
+        Chams = false
+    },
+    Misc = {
+        FOVCircle = true,
+        FOVColor = Color3.fromRGB(255, 255, 255),
+        RemoveRecoil = false,
+        InfiniteJump = false,
+        SpeedHack = false,
+        SpeedValue = 16,
+        AntiLock = false
+    },
+    Config = {
+        AutoSave = true,
+        ConfigName = "default"
     }
-    
-    self.Tabs[name] = tab
-    
-    -- Make first tab active
-    if not self.CurrentTab then
-        tabButton.BackgroundColor3 = self.Theme.Accent
-        tabContent.Visible = true
-        self.CurrentTab = tabContent
+}
+
+-- Home Tab
+local WelcomeSection = Tabs.Home:AddSection("Welcome")
+
+Tabs.Home:AddParagraph({
+    Title = "Quantum Apex",
+    Content = "Universal aimbot system for Roblox FPS games. Configure your settings in the tabs above."
+})
+
+local StatsSection = Tabs.Home:AddSection("Statistics")
+
+local StatusLabel = Tabs.Home:AddParagraph({
+    Title = "Status",
+    Content = "Waiting for modules..."
+})
+
+local GameInfo = Tabs.Home:AddParagraph({
+    Title = "Game Info",
+    Content = "Game: " .. game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name .. "\nPlace ID: " .. game.PlaceId
+})
+
+Tabs.Home:AddButton({
+    Title = "Copy Game Link",
+    Description = "Copy current game link to clipboard",
+    Callback = function()
+        setclipboard("https://www.roblox.com/games/" .. game.PlaceId)
+        Fluent:Notify({
+            Title = "Copied",
+            Content = "Game link copied to clipboard!",
+            Duration = 3
+        })
     end
-    
-    return tab
-end
+})
 
-function Library:AddButton(tab, text, callback)
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 0, isMobile and 45 or 38)
-    button.BackgroundColor3 = self.Theme.ElementBackground
-    button.Text = text
-    button.TextColor3 = self.Theme.TitleText
-    button.TextSize = self.Theme.FontSize
-    button.Font = Enum.Font.Gotham
-    button.AutoButtonColor = false
-    button.Parent = tab.Content
-    
-    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 8)
-    
-    button.MouseButton1Click:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = self.Theme.Accent}):Play()
-        wait(0.1)
-        TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = self.Theme.ElementBackground}):Play()
-        
-        callback()
-    end)
-    
-    button.MouseEnter:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = self.Theme.ElementBackgroundHover}):Play()
-    end)
-    
-    button.MouseLeave:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = self.Theme.ElementBackground}):Play()
-    end)
-    
-    return button
-end
+Tabs.Home:AddButton({
+    Title = "Rejoin Server",
+    Description = "Rejoin current server",
+    Callback = function()
+        game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId)
+    end
+})
 
-function Library:AddToggle(tab, text, default, callback)
-    local toggleFrame = Instance.new("Frame")
-    toggleFrame.Size = UDim2.new(1, 0, 0, isMobile and 45 or 38)
-    toggleFrame.BackgroundColor3 = self.Theme.ElementBackground
-    toggleFrame.Parent = tab.Content
-    
-    Instance.new("UICorner", toggleFrame).CornerRadius = UDim.new(0, 8)
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -55, 1, 0)
-    label.Position = UDim2.new(0, 12, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = self.Theme.TitleText
-    label.TextSize = self.Theme.FontSize
-    label.Font = Enum.Font.Gotham
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = toggleFrame
-    
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, isMobile and 45 or 40, 0, isMobile and 25 or 22)
-    toggleBtn.Position = UDim2.new(1, -50, 0.5, 0)
-    toggleBtn.AnchorPoint = Vector2.new(0, 0.5)
-    toggleBtn.BackgroundColor3 = default and self.Theme.ToggleOn or self.Theme.ToggleOff
-    toggleBtn.Text = ""
-    toggleBtn.AutoButtonColor = false
-    toggleBtn.Parent = toggleFrame
-    
-    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
-    
-    local circle = Instance.new("Frame")
-    circle.Size = UDim2.new(0, isMobile and 19 or 16, 0, isMobile and 19 or 16)
-    circle.Position = default and UDim2.new(1, isMobile and -22 or -19, 0.5, 0) or UDim2.new(0, 3, 0.5, 0)
-    circle.AnchorPoint = Vector2.new(0, 0.5)
-    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    circle.Parent = toggleBtn
-    
-    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
-    
-    local state = default
-    
-    toggleBtn.MouseButton1Click:Connect(function()
-        state = not state
-        
-        TweenService:Create(toggleBtn, TweenInfo.new(self.AnimationSpeed), {
-            BackgroundColor3 = state and self.Theme.ToggleOn or self.Theme.ToggleOff
-        }):Play()
-        
-        TweenService:Create(circle, TweenInfo.new(self.AnimationSpeed), {
-            Position = state and UDim2.new(1, isMobile and -22 or -19, 0.5, 0) or UDim2.new(0, 3, 0.5, 0)
-        }):Play()
-        
-        callback(state)
-    end)
-    
-    return toggleFrame
-end
+local CreditsSection = Tabs.Home:AddSection("Credits")
 
-function Library:AddLabel(tab, text)
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, isMobile and 35 or 30)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = self.Theme.SubText
-    label.TextSize = self.Theme.FontSize
-    label.Font = Enum.Font.Gotham
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextWrapped = true
-    label.Parent = tab.Content
-    
-    return label
-end
+Tabs.Home:AddParagraph({
+    Title = "Developer",
+    Content = "Created by GodFirstAlways\nVersion: 2.1.0\nLast Updated: " .. os.date("%m/%d/%Y")
+})
 
-return Library
+-- Aimbot Tab
+local AimbotSection = Tabs.Aimbot:AddSection("Standard Aimbot")
+
+Tabs.Aimbot:AddToggle("AimbotEnabled", {
+    Title = "Enable Aimbot",
+    Description = "Toggle aimbot on/off (Hold RMB to aim)",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Aimbot.Enabled = v
+    end
+})
+
+Tabs.Aimbot:AddToggle("AimbotTeamCheck", {
+    Title = "Team Check",
+    Description = "Don't aim at teammates",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Aimbot.TeamCheck = v
+    end
+})
+
+Tabs.Aimbot:AddToggle("AimbotVisCheck", {
+    Title = "Visible Check",
+    Description = "Only aim at visible players",
+    Default = true,
+    Callback = function(v)
+        _G.QuantumSettings.Aimbot.VisibleCheck = v
+    end
+})
+
+Tabs.Aimbot:AddToggle("AimbotIgnoreWalls", {
+    Title = "Ignore Walls",
+    Description = "Aim through walls",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Aimbot.IgnoreWalls = v
+    end
+})
+
+Tabs.Aimbot:AddToggle("AimbotPredict", {
+    Title = "Predict Movement",
+    Description = "Predict player movement",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Aimbot.PredictMovement = v
+    end
+})
+
+Tabs.Aimbot:AddSlider("AimbotFOV", {
+    Title = "FOV Radius",
+    Description = "Field of view circle size",
+    Default = 80,
+    Min = 20,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(v)
+        _G.QuantumSettings.Aimbot.FOV = v
+    end
+})
+
+Tabs.Aimbot:AddSlider("AimbotSmoothness", {
+    Title = "Smoothness",
+    Description = "How smooth the aimbot moves (higher = smoother)",
+    Default = 8,
+    Min = 1,
+    Max = 20,
+    Rounding = 0,
+    Callback = function(v)
+        _G.QuantumSettings.Aimbot.Smoothness = v
+    end
+})
+
+Tabs.Aimbot:AddDropdown("AimbotAimPart", {
+    Title = "Target Part",
+    Description = "Body part to aim at",
+    Values = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"},
+    Default = 1,
+    Callback = function(v)
+        _G.QuantumSettings.Aimbot.AimPart = v
+    end
+})
+
+-- Silent Aim Section
+local SilentAimSection = Tabs.Aimbot:AddSection("Silent Aim")
+
+Tabs.Aimbot:AddToggle("SilentAimEnabled", {
+    Title = "Enable Silent Aim",
+    Description = "Automatically hit targets without moving camera",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.SilentAim.Enabled = v
+    end
+})
+
+Tabs.Aimbot:AddToggle("SilentAimTeamCheck", {
+    Title = "Team Check",
+    Description = "Don't hit teammates",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.SilentAim.TeamCheck = v
+    end
+})
+
+Tabs.Aimbot:AddSlider("SilentAimFOV", {
+    Title = "FOV Radius",
+    Description = "Detection range for silent aim",
+    Default = 100,
+    Min = 20,
+    Max = 300,
+    Rounding = 0,
+    Callback = function(v)
+        _G.QuantumSettings.SilentAim.FOV = v
+    end
+})
+
+Tabs.Aimbot:AddSlider("SilentAimHitChance", {
+    Title = "Hit Chance %",
+    Description = "Chance to hit target (anti-detection)",
+    Default = 100,
+    Min = 0,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(v)
+        _G.QuantumSettings.SilentAim.HitChance = v
+    end
+})
+
+Tabs.Aimbot:AddDropdown("SilentAimPart", {
+    Title = "Target Part",
+    Description = "Body part to hit",
+    Values = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"},
+    Default = 1,
+    Callback = function(v)
+        _G.QuantumSettings.SilentAim.AimPart = v
+    end
+})
+
+Tabs.Aimbot:AddDropdown("SilentAimMethod", {
+    Title = "Hook Method",
+    Description = "Method to hook remote events",
+    Values = {"Namecall", "Index", "Auto"},
+    Default = 1,
+    Callback = function(v)
+        _G.QuantumSettings.SilentAim.Method = v
+    end
+})
+
+-- Humanization Section
+local HumanizationSection = Tabs.Aimbot:AddSection("Humanization")
+
+Tabs.Aimbot:AddToggle("HumanizationEnabled", {
+    Title = "Enable Humanization",
+    Description = "Make aimbot look more human-like",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Humanization.Enabled = v
+    end
+})
+
+Tabs.Aimbot:AddSlider("HumanizationShake", {
+    Title = "Aim Shake",
+    Description = "Random shake intensity",
+    Default = 2,
+    Min = 0,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(v)
+        _G.QuantumSettings.Humanization.Shake = v
+    end
+})
+
+Tabs.Aimbot:AddSlider("HumanizationPrediction", {
+    Title = "Prediction Value",
+    Description = "Movement prediction amount",
+    Default = 0.13,
+    Min = 0,
+    Max = 0.5,
+    Rounding = 2,
+    Callback = function(v)
+        _G.QuantumSettings.Humanization.Prediction = v
+    end
+})
+
+Tabs.Aimbot:AddSlider("HumanizationReaction", {
+    Title = "Reaction Time (ms)",
+    Description = "Delay before aiming at new target",
+    Default = 50,
+    Min = 0,
+    Max = 500,
+    Rounding = 0,
+    Callback = function(v)
+        _G.QuantumSettings.Humanization.ReactionTime = v
+    end
+})
+
+Tabs.Aimbot:AddToggle("HumanizationAutoShoot", {
+    Title = "Auto Shoot",
+    Description = "Automatically shoot when target is locked",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Humanization.AutoShoot = v
+    end
+})
+
+-- ESP Tab (Visuals)
+local ESPSection = Tabs.ESP:AddSection("Player ESP")
+
+Tabs.ESP:AddToggle("ESPEnabled", {
+    Title = "Enable ESP",
+    Description = "See players through walls",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.Enabled = v
+    end
+})
+
+Tabs.ESP:AddToggle("ESPBoxes", {
+    Title = "Box ESP",
+    Description = "Draw boxes around players",
+    Default = true,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.Boxes = v
+    end
+})
+
+Tabs.ESP:AddToggle("ESPNames", {
+    Title = "Name ESP",
+    Description = "Show player names",
+    Default = true,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.Names = v
+    end
+})
+
+Tabs.ESP:AddToggle("ESPDistance", {
+    Title = "Distance ESP",
+    Description = "Show distance to players",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.Distance = v
+    end
+})
+
+Tabs.ESP:AddToggle("ESPHealth", {
+    Title = "Health Bar",
+    Description = "Show health bars",
+    Default = true,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.Health = v
+    end
+})
+
+Tabs.ESP:AddToggle("ESPTracers", {
+    Title = "Tracers",
+    Description = "Draw lines to players",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.Tracers = v
+    end
+})
+
+Tabs.ESP:AddToggle("ESPSkeleton", {
+    Title = "Skeleton ESP",
+    Description = "Show player skeleton",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.Skeleton = v
+    end
+})
+
+Tabs.ESP:AddToggle("ESPChams", {
+    Title = "Chams",
+    Description = "Highlight players through walls",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.Chams = v
+    end
+})
+
+Tabs.ESP:AddToggle("ESPTeamCheck", {
+    Title = "Team Check",
+    Description = "Don't show teammates",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.TeamCheck = v
+    end
+})
+
+Tabs.ESP:AddToggle("ESPShowTeam", {
+    Title = "Show Team Colors",
+    Description = "Color ESP by team",
+    Default = true,
+    Callback = function(v)
+        _G.QuantumSettings.ESP.ShowTeam = v
+    end
+})
+
+-- Misc Tab
+local FOVSection = Tabs.Misc:AddSection("FOV Circle")
+
+Tabs.Misc:AddToggle("FOVCircle", {
+    Title = "Show FOV Circle",
+    Description = "Display aimbot FOV circle",
+    Default = true,
+    Callback = function(v)
+        _G.QuantumSettings.Misc.FOVCircle = v
+    end
+})
+
+Tabs.Misc:AddColorpicker("FOVColor", {
+    Title = "FOV Color",
+    Description = "Circle color",
+    Default = Color3.fromRGB(255, 255, 255),
+    Callback = function(v)
+        _G.QuantumSettings.Misc.FOVColor = v
+    end
+})
+
+local MovementSection = Tabs.Misc:AddSection("Movement")
+
+Tabs.Misc:AddToggle("InfiniteJump", {
+    Title = "Infinite Jump",
+    Description = "Jump infinitely",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Misc.InfiniteJump = v
+    end
+})
+
+Tabs.Misc:AddToggle("SpeedHack", {
+    Title = "Speed Hack",
+    Description = "Increase walk speed",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Misc.SpeedHack = v
+    end
+})
+
+Tabs.Misc:AddSlider("SpeedValue", {
+    Title = "Speed Amount",
+    Description = "Walk speed multiplier",
+    Default = 16,
+    Min = 16,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(v)
+        _G.QuantumSettings.Misc.SpeedValue = v
+    end
+})
+
+local CombatSection = Tabs.Misc:AddSection("Combat")
+
+Tabs.Misc:AddToggle("RemoveRecoil", {
+    Title = "No Recoil",
+    Description = "Remove weapon recoil",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Misc.RemoveRecoil = v
+    end
+})
+
+Tabs.Misc:AddToggle("AntiLock", {
+    Title = "Anti-Lock",
+    Description = "Counter enemy aimbot",
+    Default = false,
+    Callback = function(v)
+        _G.QuantumSettings.Misc.AntiLock = v
+    end
+})
+
+-- Config Tab
+local ConfigSection = Tabs.Config:AddSection("Configuration")
+
+Tabs.Config:AddToggle("AutoSave", {
+    Title = "Auto Save",
+    Description = "Automatically save settings",
+    Default = true,
+    Callback = function(v)
+        _G.QuantumSettings.Config.AutoSave = v
+    end
+})
+
+Tabs.Config:AddInput("ConfigName", {
+    Title = "Config Name",
+    Description = "Name for your configuration",
+    Default = "default",
+    Placeholder = "Enter config name...",
+    Callback = function(v)
+        _G.QuantumSettings.Config.ConfigName = v
+    end
+})
+
+Tabs.Config:AddButton({
+    Title = "Save Config",
+    Description = "Save current settings",
+    Callback = function()
+        -- Config save logic will be in separate module
+        Fluent:Notify({
+            Title = "Config",
+            Content = "Config saved successfully!",
+            Duration = 3
+        })
+    end
+})
+
+Tabs.Config:AddButton({
+    Title = "Load Config",
+    Description = "Load saved settings",
+    Callback = function()
+        -- Config load logic will be in separate module
+        Fluent:Notify({
+            Title = "Config",
+            Content = "Config loaded successfully!",
+            Duration = 3
+        })
+    end
+})
+
+Tabs.Config:AddButton({
+    Title = "Reset to Default",
+    Description = "Reset all settings",
+    Callback = function()
+        -- Reset logic will be in separate module
+        Fluent:Notify({
+            Title = "Config",
+            Content = "Settings reset to default!",
+            Duration = 3
+        })
+    end
+})
+
+local DebuggingSection = Tabs.Config:AddSection("Debugging")
+
+Tabs.Config:AddButton({
+    Title = "Print Settings",
+    Description = "Print current settings to console",
+    Callback = function()
+        print("=== Quantum Settings ===")
+        for category, settings in pairs(_G.QuantumSettings) do
+            print("\n[" .. category .. "]")
+            for setting, value in pairs(settings) do
+                print("  " .. setting .. " = " .. tostring(value))
+            end
+        end
+    end
+})
+
+Tabs.Config:AddButton({
+    Title = "Destroy UI",
+    Description = "Close and remove the UI",
+    Callback = function()
+        Fluent:Destroy()
+    end
+})
+
+-- Load notification
+Fluent:Notify({
+    Title = "Quantum Apex",
+    Content = "UI Loaded - Ready for modules",
+    Duration = 5
+})

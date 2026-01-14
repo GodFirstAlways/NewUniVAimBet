@@ -1,20 +1,18 @@
--- Load the UI library from GitHub
-local gui = loadstring(game:HttpGet("https://raw.githubusercontent.com/GodFirstAlways/NewUniVAimBet/main/gui/ui.lua"))()
+-- Main loader for Quantum Aimbot
+local repo = "https://raw.githubusercontent.com/GodFirstAlways/NewUniVAimBet/main/"
 
--- Initialize the UI
-local ui = gui:Init("TooTrue Aimbot")
+print("Loading Quantum...")
 
--- Create tabs
-local mainTab = ui:CreateTab("Main", "🎯")
-local miscTab = ui:CreateTab("Misc", "⚙️")
+-- Load UI first
+loadstring(game:HttpGet(repo .. "gui/ui.lua"))()
 
--- Add elements
-ui:AddButton(mainTab, "Activate Aimbot", function()
-    print("Aimbot activated!")
-end)
+-- Wait for UI to initialize
+task.wait(0.5)
 
-ui:AddToggle(mainTab, "ESP", false, function(state)
-    print("ESP toggled:", state)
-end)
+-- Load core features
+loadstring(game:HttpGet(repo .. "aimbot.lua"))()
+loadstring(game:HttpGet(repo .. "silentaim.lua"))()
+loadstring(game:HttpGet(repo .. "humanization.lua"))()
+loadstring(game:HttpGet(repo .. "esp.lua"))()
 
-ui:AddLabel(miscTab, "Made with TooTrue UI")
+print("Quantum fully loaded!")
