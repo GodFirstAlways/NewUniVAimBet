@@ -1,5 +1,5 @@
--- Player Pool Manager
--- Centralized player tracking for all features
+-- Player Pool Manager - OPTIMIZED
+-- Centralized player tracking with performance improvements
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -10,8 +10,12 @@ local Camera = Workspace.CurrentCamera
 -- Initialize global player pool
 _G.QuantumPlayerPool = {}
 
+-- Performance settings
+local VisibilityCheckInterval = 5  -- Check visibility every 5 frames (not every frame!)
+local VisibilityCache = {}  -- Cache visibility results
+
 -- Player data structure
-local function CreatePlayerData(player)
+local function CreatePlayerData(player, frameCount)
     if not player.Character then return nil end
     
     local character = player.Character
@@ -42,13 +46,21 @@ local function CreatePlayerData(player)
     -- Calculate distance
     local distance = (rootPart.Position - Camera.CFrame.Position).Magnitude
     
-    -- Visibility check (raycast)
+    -- Visibility check (CACHED - only run every X frames)
     local isVisible = false
-    local ray = Ray.new(Camera.CFrame.Position, (rootPart.Position - Camera.CFrame.Position).Unit * distance)
-    local hitPart, hitPosition = Workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, Camera})
-    
-    if hitPart and hitPart:IsDescendantOf(character) then
-        isVisible = true
+    if not VisibilityCache[player] or (frameCount % VisibilityCheckInterval == 0) then
+        local ray = Ray.new(Camera.CFrame.Position, (rootPart.Position - Camera.CFrame.Position).Unit * distance)
+        local hitPart = Workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, Camera})
+        
+        if hitPart and hitPart:IsDescendantOf(character) then
+            isVisible = true
+        end
+        
+        -- Cache result
+        VisibilityCache[player] = isVisible
+    else
+        -- Use cached result
+        isVisible = VisibilityCache[player]
     end
     
     -- Calculate velocity for prediction
@@ -101,13 +113,13 @@ local function CreatePlayerData(player)
         -- Box dimensions
         BoxWidth = boxWidth,
         BoxHeight = boxHeight,
-        BoxPosition = Vector2.new(screenPos.X - boxWidth/2, screenPos.Y - boxHeight/2),
+        BoxPosition = Vector2.new(screenPos.X, screenPos.Y),
         
         -- Distance
         Distance = distance,
         DistanceFormatted = math.floor(distance) .. "m",
         
-        -- Visibility
+        -- Visibility (CACHED)
         IsVisible = isVisible,
         BehindWall = not isVisible,
         
@@ -116,9 +128,9 @@ local function CreatePlayerData(player)
         IsEnemy = not isTeammate,
         
         -- Mouse/Camera data
-        DistanceFromMouse = nil, -- Calculated below
-        DistanceFromCenter = nil, -- Calculated below
-        AngleFromCamera = nil, -- Calculated below
+        DistanceFromMouse = nil,
+        DistanceFromCenter = nil,
+        AngleFromCamera = nil,
         
         -- Timestamp
         LastUpdate = tick()
@@ -147,13 +159,15 @@ local function CalculateAimData(playerData)
     return playerData
 end
 
--- Main update function
+-- Main update function with frame counter
+local frameCount = 0
 local function UpdatePlayerPool()
+    frameCount = frameCount + 1
     local pool = {}
     
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            local data = CreatePlayerData(player)
+            local data = CreatePlayerData(player, frameCount)
             if data then
                 data = CalculateAimData(data)
                 table.insert(pool, data)
@@ -167,9 +181,18 @@ local function UpdatePlayerPool()
     end)
     
     _G.QuantumPlayerPool = pool
+    
+    -- Clean visibility cache every 100 frames
+    if frameCount % 100 == 0 then
+        for player, _ in pairs(VisibilityCache) do
+            if not Players:FindFirstChild(player.Name) then
+                VisibilityCache[player] = nil
+            end
+        end
+    end
 end
 
--- Update every frame
+-- Update every frame (but raycasts are cached)
 RunService.RenderStepped:Connect(UpdatePlayerPool)
 
 -- Helper functions for modules to use
@@ -286,6 +309,7 @@ _G.QuantumHelpers = {
     end,
 }
 
-print("[Quantum] Player Pool initialized")
+print("[Quantum] OPTIMIZED Player Pool initialized")
+print("[Quantum] Raycasts cached every " .. VisibilityCheckInterval .. " frames")
 print("[Quantum] Use _G.QuantumPlayerPool to access player data")
 print("[Quantum] Use _G.QuantumHelpers for filtering functions")

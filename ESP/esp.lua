@@ -1,15 +1,17 @@
--- ESP.lua - Main ESP Manager
--- Handles enabling/disabling ESP features and updating all players
+-- ESP.lua - Optimized ESP Manager
+-- Throttled updates for better performance
 
 local RunService = game:GetService("RunService")
 
 _G.QuantumESP = _G.QuantumESP or {}
 _G.QuantumESP.Active = false
 _G.QuantumESP.Connection = nil
+_G.QuantumESP.UpdateRate = 2  -- Update every 2 frames (30 FPS instead of 60)
+_G.QuantumESP.FrameCount = 0
 
 -- Initialize ESP system
 function _G.QuantumESP.Initialize()
-    print("[ESP] Initializing ESP system...")
+    print("[ESP] Initializing optimized ESP system...")
     
     -- Make sure PlayerPool exists
     if not _G.QuantumPlayerPool then
@@ -24,6 +26,7 @@ function _G.QuantumESP.Initialize()
     end
     
     print("[ESP] ESP system initialized successfully")
+    print("[ESP] Update rate: Every " .. _G.QuantumESP.UpdateRate .. " frames")
     return true
 end
 
@@ -34,12 +37,19 @@ function _G.QuantumESP.Start()
         return
     end
     
-    print("[ESP] Starting ESP rendering...")
+    print("[ESP] Starting optimized ESP rendering...")
     _G.QuantumESP.Active = true
+    _G.QuantumESP.FrameCount = 0
     
-    -- Connect to RenderStepped for smooth ESP updates
+    -- Connect to RenderStepped but throttle updates
     _G.QuantumESP.Connection = RunService.RenderStepped:Connect(function()
-        _G.QuantumESP.Update()
+        _G.QuantumESP.FrameCount = _G.QuantumESP.FrameCount + 1
+        
+        -- Only update every X frames
+        if _G.QuantumESP.FrameCount >= _G.QuantumESP.UpdateRate then
+            _G.QuantumESP.Update()
+            _G.QuantumESP.FrameCount = 0
+        end
     end)
     
     print("[ESP] ESP started successfully")
@@ -68,7 +78,7 @@ function _G.QuantumESP.Stop()
     print("[ESP] ESP stopped")
 end
 
--- Main update function (called every frame)
+-- Main update function (called every X frames)
 function _G.QuantumESP.Update()
     if not _G.QuantumSettings.ESP.Enabled then
         return
@@ -118,10 +128,17 @@ function _G.QuantumESP.Toggle(enabled)
     end
 end
 
+-- Change update rate (1 = every frame, 2 = every 2 frames, etc)
+function _G.QuantumESP.SetUpdateRate(rate)
+    _G.QuantumESP.UpdateRate = math.max(1, math.floor(rate))
+    print("[ESP] Update rate changed to: Every " .. _G.QuantumESP.UpdateRate .. " frames")
+end
+
 -- Get ESP status
 function _G.QuantumESP.IsActive()
     return _G.QuantumESP.Active
 end
 
-print("[ESP] ESP.lua loaded successfully")
+print("[ESP] Optimized ESP.lua loaded successfully")
 print("[ESP] Use _G.QuantumESP.Initialize() to start")
+print("[ESP] Use _G.QuantumESP.SetUpdateRate(n) to change speed")
