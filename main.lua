@@ -1,19 +1,20 @@
-local gui = require("gui/mainWindow")
+-- Load the UI library from GitHub
+local gui = loadstring(game:HttpGet("https://raw.githubusercontent.com/GodFirstAlways/NewUniVAimBet/main/gui/ui.lua"))()
 
 -- Initialize the UI
-local ui = gui:Init("My Custom Script")
+local ui = gui:Init("TooTrue Aimbot")
 
 -- Create tabs
-local mainTab = ui:CreateTab("Main", "🏠")
+local mainTab = ui:CreateTab("Main", "🎯")
 local miscTab = ui:CreateTab("Misc", "⚙️")
 
 -- Add elements
-ui:AddButton(mainTab, "Click Me", function()
-    print("Button clicked!")
+ui:AddButton(mainTab, "Activate Aimbot", function()
+    print("Aimbot activated!")
 end)
 
 ui:AddToggle(mainTab, "ESP", false, function(state)
-    print("ESP:", state)
+    print("ESP toggled:", state)
 end)
 
-ui:AddLabel(miscTab, "This is a label")
+ui:AddLabel(miscTab, "Made with TooTrue UI")
