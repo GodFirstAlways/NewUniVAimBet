@@ -335,6 +335,22 @@ Tabs.ESP:AddToggle("ESPEnabled", {
     Default = false,
     Callback = function(v)
         _G.QuantumSettings.ESP.Enabled = v
+        
+        -- Initialize ESP if not done yet
+        if v and _G.QuantumESP and not _G.QuantumESP.Active then
+            local success = _G.QuantumESP.Initialize()
+            if success then
+                _G.QuantumESP.Start()
+            else
+                Fluent:Notify({
+                    Title = "ESP Error",
+                    Content = "Failed to initialize ESP. Check console.",
+                    Duration = 5
+                })
+            end
+        elseif not v and _G.QuantumESP then
+            _G.QuantumESP.Stop()
+        end
     end
 })
 
