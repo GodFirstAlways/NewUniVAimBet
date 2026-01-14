@@ -12,11 +12,11 @@ task.wait(0.2)
 
 -- Load ESP modules
 print("[2/6] Loading Box ESP...")
-loadstring(game:HttpGet(repo .. "esp/Box.lua"))()
+loadstring(game:HttpGet(repo .. "ESP/Box.lua"))()
 task.wait(0.1)
 
 print("[3/6] Loading ESP Manager...")
-loadstring(game:HttpGet(repo .. "esp/ESP.lua"))()
+loadstring(game:HttpGet(repo .. "ESP/esp.lua"))()
 task.wait(0.1)
 
 -- Load UI
