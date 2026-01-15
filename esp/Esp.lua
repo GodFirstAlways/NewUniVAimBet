@@ -35,6 +35,16 @@ function _G.QuantumESP.Initialize()
         print("[ESP] Skeleton ESP module loaded")
     end
     
+    -- Check for HealthBar module (optional)
+    if _G.QuantumHealthBarESP then
+        print("[ESP] HealthBar ESP module loaded")
+    end
+    
+    -- Check for Tracer module (optional)
+    if _G.QuantumTracerESP then
+        print("[ESP] Tracer ESP module loaded")
+    end
+    
     print("[ESP] ESP system initialized successfully")
     print("[ESP] Update rate: Every " .. _G.QuantumESP.UpdateRate .. " frames")
     return true
@@ -90,6 +100,12 @@ function _G.QuantumESP.Stop()
     if _G.QuantumSkeletonESP then
         _G.QuantumSkeletonESP.ClearAll()
     end
+    if _G.QuantumHealthBarESP then
+        _G.QuantumHealthBarESP.ClearAll()
+    end
+    if _G.QuantumTracerESP then
+        _G.QuantumTracerESP.ClearAll()
+    end
     
     print("[ESP] ESP stopped")
 end
@@ -143,6 +159,28 @@ function _G.QuantumESP.Update()
                     _G.QuantumSkeletonESP.Remove(playerData.Player)
                 end
             end
+            
+            -- Draw Health Bar
+            if _G.QuantumSettings.ESP.Health then
+                if _G.QuantumHealthBarESP then
+                    _G.QuantumHealthBarESP.Draw(playerData)
+                end
+            else
+                if _G.QuantumHealthBarESP then
+                    _G.QuantumHealthBarESP.Remove(playerData.Player)
+                end
+            end
+            
+            -- Draw Tracers
+            if _G.QuantumSettings.ESP.Tracers then
+                if _G.QuantumTracerESP then
+                    _G.QuantumTracerESP.Draw(playerData)
+                end
+            else
+                if _G.QuantumTracerESP then
+                    _G.QuantumTracerESP.Remove(playerData.Player)
+                end
+            end
         else
             -- Remove ESP if player is invalid or doesn't pass checks
             if _G.QuantumBoxESP and playerData and playerData.Player then
@@ -153,6 +191,12 @@ function _G.QuantumESP.Update()
             end
             if _G.QuantumSkeletonESP and playerData and playerData.Player then
                 _G.QuantumSkeletonESP.Remove(playerData.Player)
+            end
+            if _G.QuantumHealthBarESP and playerData and playerData.Player then
+                _G.QuantumHealthBarESP.Remove(playerData.Player)
+            end
+            if _G.QuantumTracerESP and playerData and playerData.Player then
+                _G.QuantumTracerESP.Remove(playerData.Player)
             end
         end
     end
@@ -166,6 +210,12 @@ function _G.QuantumESP.Update()
     end
     if _G.QuantumSkeletonESP then
         _G.QuantumSkeletonESP.CleanupInvalid(players)
+    end
+    if _G.QuantumHealthBarESP then
+        _G.QuantumHealthBarESP.CleanupInvalid(players)
+    end
+    if _G.QuantumTracerESP then
+        _G.QuantumTracerESP.CleanupInvalid(players)
     end
 end
 

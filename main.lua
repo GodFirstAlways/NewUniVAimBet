@@ -10,15 +10,18 @@ print("[1/6] Loading Player Pool...")
 loadstring(game:HttpGet(repo .. "core/PlayerPool.lua"))()
 task.wait(0.2)
 
-
+-- Load ESP modules
 print("[2/6] Loading ESP Modules...")
 loadstring(game:HttpGet(repo .. "esp/Box.lua"))()
 loadstring(game:HttpGet(repo .. "esp/Name.lua"))()
 loadstring(game:HttpGet(repo .. "esp/Skeleton.lua"))()
+loadstring(game:HttpGet(repo .. "esp/HealthBar.lua"))()
+loadstring(game:HttpGet(repo .. "esp/Tracer.lua"))()
 task.wait(0.1)
 
 print("[3/6] Loading ESP Manager...")
-loadstring(game:HttpGet(repo .. "esp/Esp.lua"))()
+loadstring(game:HttpGet(repo .. "esp/ESP.lua"))()
+task.wait(0.1)
 
 -- Load UI
 print("[4/6] Loading UI...")
@@ -32,13 +35,8 @@ print("[5/6] Skipping Aimbot Features (not created yet)...")
 -- loadstring(game:HttpGet(repo .. "features/humanization.lua"))()
 -- task.wait(0.2)
 
--- InitializeESP system
+-- Initialize ESP system
 print("[6/6] Initializing ESP...")
 if _G.QuantumESP then
     _G.QuantumESP.Initialize()
 end
-
-print("=================================")
-print("  Quantum Fully Loaded!")
-print("  Press RightControl to open UI")
-print("=================================")
