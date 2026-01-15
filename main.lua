@@ -10,16 +10,15 @@ print("[1/6] Loading Player Pool...")
 loadstring(game:HttpGet(repo .. "core/PlayerPool.lua"))()
 task.wait(0.2)
 
--- Load ESP modules
+
 print("[2/6] Loading ESP Modules...")
-loadstring(game:HttpGet(repo .. "ESP/Box.lua"))()
-loadstring(game:HttpGet(repo .. "ESP/Name.lua"))()
-loadstring(game:HttpGet(repo .. "ESP/Skeleton.lua"))()
+loadstring(game:HttpGet(repo .. "esp/Box.lua"))()
+loadstring(game:HttpGet(repo .. "esp/Name.lua"))()
+loadstring(game:HttpGet(repo .. "esp/Skeleton.lua"))()
 task.wait(0.1)
 
 print("[3/6] Loading ESP Manager...")
-loadstring(game:HttpGet(repo .. "ESP/ESP.lua"))()
-task.wait(0.1)
+loadstring(game:HttpGet(repo .. "esp/ESP.lua"))()
 
 -- Load UI
 print("[4/6] Loading UI...")
