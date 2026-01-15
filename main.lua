@@ -7,25 +7,25 @@ print("=================================")
 
 -- Load Player Pool FIRST (required by all features)
 print("[1/6] Loading Player Pool...")
-loadstring(game:HttpGet(repo .. "core/PlayerPool.lua"))()
+loadstring(game:HttpGet(repo .. "core/PlayerPool.lua?v="))()
 task.wait(0.2)
 
 -- Load ESP modules
 print("[2/6] Loading ESP Modules...")
-loadstring(game:HttpGet(repo .. "esp/Box.lua"))()
-loadstring(game:HttpGet(repo .. "esp/Name.lua"))()
-loadstring(game:HttpGet(repo .. "esp/Skeleton.lua"))()
-loadstring(game:HttpGet(repo .. "esp/HealthBar.lua"))()
-loadstring(game:HttpGet(repo .. "esp/Tracer.lua"))()
+loadstring(game:HttpGet(repo .. "esp/Box.lua?v="))()
+loadstring(game:HttpGet(repo .. "esp/Name.lua?v="))()
+loadstring(game:HttpGet(repo .. "esp/Skeleton.lua?v="))()
+loadstring(game:HttpGet(repo .. "esp/HealthBar.lua?v="))()
+loadstring(game:HttpGet(repo .. "esp/Tracer.lua?v="))()
 task.wait(0.1)
 
 print("[3/6] Loading ESP Manager...")
-loadstring(game:HttpGet(repo .. "esp/Esp.lua"))()
+loadstring(game:HttpGet(repo .. "esp/Esp.lua?v="))()
 task.wait(0.1)
 
 -- Load UI
 print("[4/6] Loading UI...")
-loadstring(game:HttpGet(repo .. "gui/ui.lua"))()
+loadstring(game:HttpGet(repo .. "gui/ui.lua?v="))()
 task.wait(0.3)
 
 -- Load aimbot features (commented out until created)
