@@ -33,7 +33,7 @@ print("[5/6] Skipping Aimbot Features (not created yet)...")
 -- loadstring(game:HttpGet(repo .. "features/humanization.lua"))()
 -- task.wait(0.2)
 
--- Initialize ESP system
+-- InitializeESP system
 print("[6/6] Initializing ESP...")
 if _G.QuantumESP then
     _G.QuantumESP.Initialize()
