@@ -29,11 +29,12 @@ loadstring(game:HttpGet(repo .. "gui/ui.lua?v="))()
 task.wait(0.3)
 
 -- Load aimbot features (commented out until created)
-print("[5/6] Skipping Aimbot Features (not created yet)...")
+print("[5/6] Aimbot Features ")
 -- loadstring(game:HttpGet(repo .. "features/aimbot.lua"))()
--- loadstring(game:HttpGet(repo .. "features/silentaim.lua"))()
+loadstring(game:HttpGet(repo .. "features/SilentAim.lua"))()
 -- loadstring(game:HttpGet(repo .. "features/humanization.lua"))()
--- task.wait(0.2)
+task.wait(0.2)
+-- In main.lua, add after ESP loading:
 
 -- Initialize ESP system
 print("[6/6] Initializing ESP...")

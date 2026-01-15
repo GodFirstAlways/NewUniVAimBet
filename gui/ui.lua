@@ -59,7 +59,7 @@ _G.QuantumSettings = {
 
 -- Create Window
 local Window = Library:CreateWindow({
-    Title = 'Quantum Apex v2.1',
+    Title = 'TooTrue',
     Center = true,
     AutoShow = true,
     TabPadding = 8,
