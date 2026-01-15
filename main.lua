@@ -18,7 +18,7 @@ loadstring(game:HttpGet(repo .. "esp/Skeleton.lua"))()
 task.wait(0.1)
 
 print("[3/6] Loading ESP Manager...")
-loadstring(game:HttpGet(repo .. "esp/ESP.lua"))()
+loadstring(game:HttpGet(repo .. "esp/Esp.lua"))()
 
 -- Load UI
 print("[4/6] Loading UI...")
