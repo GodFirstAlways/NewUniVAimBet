@@ -23,7 +23,7 @@ _G.QuantumSettings = {
         FOV = 100,
         HitChance = 100,
         AimPart = "Head",
-        Method = "Namecall"
+        Method = "Camera Snap"
     },
     Humanization = {
         Enabled = false,
@@ -212,6 +212,30 @@ SilentAimBox:AddDropdown('SilentAimPart', {
     Tooltip = 'Body part to hit',
     Callback = function(Value)
         _G.QuantumSettings.SilentAim.AimPart = Value
+    end
+})
+
+SilentAimBox:AddDivider()
+
+SilentAimBox:AddDropdown('SilentAimMethod', {
+    Values = {'Camera Snap', 'Namecall Hook'},
+    Default = 1,
+    Multi = false,
+    Text = 'Method',
+    Tooltip = 'Camera Snap = Works everywhere\nNamecall Hook = High-level only',
+    Callback = function(Value)
+        if _G.QuantumSilentAim and _G.QuantumSilentAim.SetMethod then
+            _G.QuantumSilentAim.SetMethod(Value)
+        end
+    end
+})
+
+SilentAimBox:AddButton({
+    Text = 'Debug Info (F9)',
+    Func = function()
+        if _G.QuantumSilentAim and _G.QuantumSilentAim.Debug then
+            _G.QuantumSilentAim.Debug()
+        end
     end
 })
 
