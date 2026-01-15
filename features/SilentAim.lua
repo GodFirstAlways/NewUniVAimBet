@@ -140,7 +140,12 @@ local function SetupNamecallHook()
                     local target = GetTarget()
                     
                     if target then
-                        print("[Silent Aim] 🎯 Hooking shot - Target: " .. target.Player.Name)
+                        print("[Silent Aim] 🎯 HOOK HIT - Target: " .. target.Player.Name)
+                        game:GetService("StarterGui"):SetCore("SendNotification", {
+                            Title = "Silent Aim",
+                            Text = "🎯 Hit: " .. target.Player.Name,
+                            Duration = 1
+                        })
                         
                         -- Modify arguments
                         for i = 2, #args do
@@ -248,7 +253,13 @@ local function PerformCameraSnap(target)
     local camPos = Camera.CFrame.Position
     local lookAt = CFrame.new(camPos, targetPos)
     
-    print("[Silent Aim] 📷 Camera snap - Target: " .. target.Player.Name)
+    print("[Silent Aim] 📷 CAMERA SNAP - Target: " .. target.Player.Name)
+    
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Silent Aim",
+        Text = "📷 Snap: " .. target.Player.Name,
+        Duration = 1
+    })
     
     -- FRAME 1: Snap to target
     Camera.CFrame = lookAt
