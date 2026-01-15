@@ -1,6 +1,5 @@
--- SilentAim.lua - Hybrid Silent Aim System
--- Intelligently uses best method based on executor capabilities
--- Works on ALL executors (Level 1 to Level 7+)
+-- SilentAim.lua - Hybrid Silent Aim System (FIXED FALLBACK)
+-- Manual method selection + Better error handling
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -15,70 +14,54 @@ _G.QuantumSilentAim = _G.QuantumSilentAim or {}
 local SilentAim = _G.QuantumSilentAim
 
 -- ========================================
+-- STATE MANAGEMENT
+-- ========================================
+SilentAim.CurrentMethod = "None"
+SilentAim.Active = false
+SilentAim.HookInstalled = false
+SilentAim.CameraSnapActive = false
+
+-- ========================================
 -- EXECUTOR CAPABILITY DETECTION
 -- ========================================
 local ExecutorCapabilities = {
     Level = 0,
-    HasNamecallHook = false,
-    HasIndexHook = false,
-    HasNewIndexHook = false,
-    Method = "None"
+    CanHook = false,
+    CanCameraSnap = true, -- Always available
 }
 
--- Detect executor capabilities
 local function DetectCapabilities()
     print("[Silent Aim] Detecting executor capabilities...")
     
-    local level = 0
-    
-    -- Test for hookmetamethod (Level 6+)
+    -- Test for hookmetamethod
     local hasHookMeta = pcall(function()
-        local test = hookmetamethod
-        return test ~= nil
+        return hookmetamethod ~= nil and getrawmetatable ~= nil and setreadonly ~= nil
     end)
     
-    -- Test for getnamecallmethod (Level 4+)
+    -- Test for getnamecallmethod
     local hasNamecall = pcall(function()
-        local test = getnamecallmethod
-        return test ~= nil
+        return getnamecallmethod ~= nil
     end)
     
-    -- Test for hookfunction (Level 5+)
-    local hasHookFunc = pcall(function()
-        local test = hookfunction
-        return test ~= nil
-    end)
-    
-    -- Determine level and capabilities
     if hasHookMeta and hasNamecall then
-        level = 6
-        ExecutorCapabilities.HasNamecallHook = true
-        ExecutorCapabilities.Method = "Namecall Hook (Best)"
-        print("[Silent Aim] ✅ Level 6+ detected - Using TRUE silent aim (hooking)")
-    elseif hasHookFunc then
-        level = 5
-        ExecutorCapabilities.HasIndexHook = true
-        ExecutorCapabilities.Method = "Function Hook"
-        print("[Silent Aim] ✅ Level 5 detected - Using function hooking")
+        ExecutorCapabilities.CanHook = true
+        ExecutorCapabilities.Level = 6
+        print("[Silent Aim] ✅ Level 6+ executor - Hooking available")
     else
-        level = 1
-        ExecutorCapabilities.Method = "Camera Snap (Universal)"
-        print("[Silent Aim] ⚠️ Low-level executor detected")
-        print("[Silent Aim] ✅ Using CAMERA SNAP method (works on all executors)")
+        ExecutorCapabilities.CanHook = false
+        ExecutorCapabilities.Level = 1
+        print("[Silent Aim] ⚠️ Low-level executor - Only camera snap available")
     end
     
-    ExecutorCapabilities.Level = level
     return ExecutorCapabilities
 end
 
--- Run detection
 DetectCapabilities()
 
 -- ========================================
 -- SHARED UTILITIES
 -- ========================================
 
--- Get target based on settings
 local function GetTarget()
     if not _G.QuantumPlayerPool or #_G.QuantumPlayerPool == 0 then
         return nil
@@ -86,22 +69,18 @@ local function GetTarget()
     
     local settings = _G.QuantumSettings.SilentAim
     
-    -- Filter settings
     local filterSettings = {
         TeamCheck = settings.TeamCheck,
         FOV = settings.FOV,
     }
     
-    -- Get closest to center (crosshair)
     local target = _G.QuantumHelpers.GetClosestToCenter(filterSettings)
-    
     if not target then return nil end
     
-    -- Get target part
     local targetPart = target.Parts[settings.AimPart] or target.Head
     if not targetPart then return nil end
     
-    -- Check hit chance
+    -- Hit chance check
     if math.random(1, 100) > settings.HitChance then
         return nil
     end
@@ -115,155 +94,192 @@ local function GetTarget()
 end
 
 -- ========================================
--- METHOD 1: TRUE SILENT AIM (HIGH-LEVEL)
+-- METHOD 1: NAMECALL HOOK
 -- ========================================
 
-local NamecallHook = nil
 local OldNamecall = nil
 
 local function SetupNamecallHook()
-    if not ExecutorCapabilities.HasNamecallHook then
+    if not ExecutorCapabilities.CanHook then
+        warn("[Silent Aim] ❌ Executor doesn't support hooking")
         return false
     end
     
-    print("[Silent Aim] Setting up namecall hook...")
+    print("[Silent Aim] Attempting to install namecall hook...")
     
-    local mt = getrawmetatable(game)
-    local old_namecall = mt.__namecall
-    setreadonly(mt, false)
-    
-    mt.__namecall = newcclosure(function(...)
-        local args = {...}
-        local method = getnamecallmethod()
+    local success, err = pcall(function()
+        local mt = getrawmetatable(game)
+        local old_namecall = mt.__namecall
         
-        -- Check if this is a shooting remote
-        if method == "FireServer" or method == "InvokeServer" then
-            if _G.QuantumSettings.SilentAim.Enabled then
-                local target = GetTarget()
+        setreadonly(mt, false)
+        
+        mt.__namecall = newcclosure(function(...)
+            local args = {...}
+            local self = args[1]
+            local method = getnamecallmethod()
+            
+            -- Check if silent aim is enabled
+            if not _G.QuantumSettings.SilentAim.Enabled then
+                return old_namecall(...)
+            end
+            
+            -- Check if method is active
+            if SilentAim.CurrentMethod ~= "Namecall Hook" then
+                return old_namecall(...)
+            end
+            
+            -- Check for shooting remotes
+            if method == "FireServer" or method == "InvokeServer" then
+                local remoteName = self.Name:lower()
                 
-                if target then
-                    -- Modify arguments to hit target
-                    -- This is game-specific, but common patterns:
+                -- Common shooting remote patterns
+                if remoteName:find("shoot") or remoteName:find("fire") or 
+                   remoteName:find("gun") or remoteName:find("bullet") or
+                   remoteName:find("damage") or remoteName:find("hit") then
                     
-                    -- Pattern 1: Args contain position/part directly
-                    for i, arg in ipairs(args) do
-                        if typeof(arg) == "Vector3" then
-                            args[i] = target.Position
-                        elseif typeof(arg) == "Instance" and arg:IsA("BasePart") then
-                            args[i] = target.Part
-                        elseif typeof(arg) == "CFrame" then
-                            args[i] = target.Part.CFrame
-                        end
-                    end
+                    local target = GetTarget()
                     
-                    -- Pattern 2: Args contain table with hit info
-                    for i, arg in ipairs(args) do
-                        if type(arg) == "table" then
-                            if arg.Position then
-                                arg.Position = target.Position
+                    if target then
+                        print("[Silent Aim] 🎯 Hooking shot - Target: " .. target.Player.Name)
+                        
+                        -- Modify arguments
+                        for i = 2, #args do
+                            local arg = args[i]
+                            
+                            -- Replace Vector3 positions
+                            if typeof(arg) == "Vector3" then
+                                args[i] = target.Position
                             end
-                            if arg.Hit then
-                                arg.Hit = target.Part
+                            
+                            -- Replace BasePart instances
+                            if typeof(arg) == "Instance" and arg:IsA("BasePart") then
+                                args[i] = target.Part
                             end
-                            if arg.Target then
-                                arg.Target = target.Part
+                            
+                            -- Replace CFrame
+                            if typeof(arg) == "CFrame" then
+                                args[i] = target.Part.CFrame
                             end
-                            if arg.Part then
-                                arg.Part = target.Part
-                            end
-                            if arg.CFrame then
-                                arg.CFrame = target.Part.CFrame
+                            
+                            -- Modify tables
+                            if type(arg) == "table" then
+                                if arg.Position then arg.Position = target.Position end
+                                if arg.Hit then arg.Hit = target.Part end
+                                if arg.Target then arg.Target = target.Part end
+                                if arg.Part then arg.Part = target.Part end
+                                if arg.CFrame then arg.CFrame = target.Part.CFrame end
                             end
                         end
                     end
                 end
             end
-        end
+            
+            return old_namecall(...)
+        end)
         
-        return old_namecall(unpack(args))
+        setreadonly(mt, true)
+        OldNamecall = old_namecall
     end)
     
-    setreadonly(mt, true)
-    OldNamecall = old_namecall
-    
-    print("[Silent Aim] ✅ Namecall hook installed successfully")
-    return true
+    if success then
+        SilentAim.HookInstalled = true
+        SilentAim.CurrentMethod = "Namecall Hook"
+        print("[Silent Aim] ✅ Namecall hook installed successfully!")
+        return true
+    else
+        warn("[Silent Aim] ❌ Failed to install hook: " .. tostring(err))
+        return false
+    end
+end
+
+local function RemoveNamecallHook()
+    if OldNamecall and SilentAim.HookInstalled then
+        pcall(function()
+            local mt = getrawmetatable(game)
+            setreadonly(mt, false)
+            mt.__namecall = OldNamecall
+            setreadonly(mt, true)
+        end)
+        SilentAim.HookInstalled = false
+        print("[Silent Aim] ✅ Namecall hook removed")
+    end
 end
 
 -- ========================================
--- METHOD 2: CAMERA SNAP (LOW-LEVEL)
+-- METHOD 2: CAMERA SNAP
 -- ========================================
 
 local CameraSnap = {
-    Active = false,
     OriginalCFrame = nil,
-    SnapStartTick = 0,
-    SnapDuration = 0.033, -- 2 frames at 60fps
     IsSnapping = false,
-    Connection = nil
+    Connection = nil,
+    LastShotTime = 0
 }
 
--- Detect shooting (game-agnostic)
 local function IsPlayerShooting()
-    -- Method 1: Check if Mouse1 is down
+    -- Check Mouse1 down
     local mouse1Down = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
     
-    -- Method 2: Check if player has a tool equipped
+    if not mouse1Down then return false end
+    
+    -- Check tool equipped
     local character = LocalPlayer.Character
     if not character then return false end
     
     local tool = character:FindFirstChildOfClass("Tool")
-    if not tool then return false end
-    
-    -- Method 3: Check if tool is activated
-    -- (Some games use tool.Activated event)
-    
-    return mouse1Down and tool ~= nil
+    return tool ~= nil
 end
 
--- Perform camera snap
 local function PerformCameraSnap(target)
     if CameraSnap.IsSnapping then return end
     
-    -- Save original camera position
-    CameraSnap.OriginalCFrame = Camera.CFrame
-    CameraSnap.IsSnapping = true
-    CameraSnap.SnapStartTick = tick()
+    -- Prevent rapid snapping
+    local currentTime = tick()
+    if currentTime - CameraSnap.LastShotTime < 0.1 then return end
     
-    -- Calculate look-at position (aim at target part)
+    CameraSnap.LastShotTime = currentTime
+    CameraSnap.IsSnapping = true
+    
+    -- Save original position
+    CameraSnap.OriginalCFrame = Camera.CFrame
+    
+    -- Calculate aim position
     local targetPos = target.Position
     local camPos = Camera.CFrame.Position
     local lookAt = CFrame.new(camPos, targetPos)
     
-    -- SNAP TO TARGET (instant)
+    print("[Silent Aim] 📷 Camera snap - Target: " .. target.Player.Name)
+    
+    -- FRAME 1: Snap to target
     Camera.CFrame = lookAt
     
-    -- Schedule snap back after 2 frames
-    task.wait(CameraSnap.SnapDuration)
+    -- Wait 2 frames (0.033s at 60fps)
+    RunService.RenderStepped:Wait()
+    RunService.RenderStepped:Wait()
     
+    -- FRAME 3: Snap back
     if CameraSnap.OriginalCFrame then
-        -- SNAP BACK (instant)
         Camera.CFrame = CameraSnap.OriginalCFrame
     end
     
     CameraSnap.IsSnapping = false
 end
 
--- Camera snap loop
 local function SetupCameraSnap()
     print("[Silent Aim] Setting up camera snap method...")
     
-    -- Listen for shooting
+    if CameraSnap.Connection then
+        CameraSnap.Connection:Disconnect()
+    end
+    
     CameraSnap.Connection = RunService.RenderStepped:Connect(function()
         if not _G.QuantumSettings.SilentAim.Enabled then return end
+        if SilentAim.CurrentMethod ~= "Camera Snap" then return end
         if CameraSnap.IsSnapping then return end
         
-        -- Check if player is shooting
         if IsPlayerShooting() then
             local target = GetTarget()
-            
             if target then
-                -- Perform camera snap
                 task.spawn(function()
                     PerformCameraSnap(target)
                 end)
@@ -271,8 +287,64 @@ local function SetupCameraSnap()
         end
     end)
     
-    print("[Silent Aim] ✅ Camera snap method ready")
+    SilentAim.CameraSnapActive = true
+    SilentAim.CurrentMethod = "Camera Snap"
+    print("[Silent Aim] ✅ Camera snap active")
     return true
+end
+
+local function RemoveCameraSnap()
+    if CameraSnap.Connection then
+        CameraSnap.Connection:Disconnect()
+        CameraSnap.Connection = nil
+        SilentAim.CameraSnapActive = false
+        print("[Silent Aim] ✅ Camera snap disconnected")
+    end
+end
+
+-- ========================================
+-- METHOD SWITCHING
+-- ========================================
+
+function SilentAim.SetMethod(method)
+    print("[Silent Aim] Switching to method: " .. method)
+    
+    -- Disable current method
+    RemoveNamecallHook()
+    RemoveCameraSnap()
+    SilentAim.CurrentMethod = "None"
+    
+    -- Enable new method
+    if method == "Namecall Hook" then
+        if ExecutorCapabilities.CanHook then
+            local success = SetupNamecallHook()
+            if not success then
+                warn("[Silent Aim] Hook failed! Falling back to camera snap...")
+                return SilentAim.SetMethod("Camera Snap")
+            end
+            _G.QuantumSettings.SilentAim.Method = "Namecall Hook"
+        else
+            warn("[Silent Aim] ❌ Your executor doesn't support hooking!")
+            return SilentAim.SetMethod("Camera Snap")
+        end
+    elseif method == "Camera Snap" then
+        SetupCameraSnap()
+        _G.QuantumSettings.SilentAim.Method = "Camera Snap"
+    elseif method == "Auto" then
+        -- Try hook first, fallback to camera snap
+        if ExecutorCapabilities.CanHook then
+            local success = SetupNamecallHook()
+            if not success then
+                print("[Silent Aim] Hook failed, using camera snap...")
+                SetupCameraSnap()
+            end
+        else
+            SetupCameraSnap()
+        end
+        _G.QuantumSettings.SilentAim.Method = "Auto"
+    end
+    
+    print("[Silent Aim] ✅ Now using: " .. SilentAim.CurrentMethod)
 end
 
 -- ========================================
@@ -284,151 +356,87 @@ function SilentAim.Initialize()
     print("  QUANTUM SILENT AIM - HYBRID SYSTEM")
     print("========================================")
     
-    -- Check dependencies
-    if not _G.QuantumPlayerPool then
-        warn("[Silent Aim] ❌ Player Pool not loaded!")
+    if not _G.QuantumPlayerPool or not _G.QuantumHelpers then
+        warn("[Silent Aim] ❌ Dependencies not loaded!")
         return false
     end
     
-    if not _G.QuantumHelpers then
-        warn("[Silent Aim] ❌ Helper functions not loaded!")
-        return false
-    end
+    -- Use the method from settings
+    local method = _G.QuantumSettings.SilentAim.Method or "Auto"
+    SilentAim.SetMethod(method)
     
-    -- Setup based on executor capabilities
-    local success = false
+    SilentAim.Active = true
+    print("[Silent Aim] ✅ Initialized successfully!")
+    print("[Silent Aim] Executor Level: " .. ExecutorCapabilities.Level)
+    print("[Silent Aim] Can Hook: " .. tostring(ExecutorCapabilities.CanHook))
+    print("[Silent Aim] Current Method: " .. SilentAim.CurrentMethod)
+    print("========================================")
     
-    if ExecutorCapabilities.HasNamecallHook then
-        -- Try high-level method first
-        success = SetupNamecallHook()
-        
-        if not success then
-            warn("[Silent Aim] Hooking failed, falling back to camera snap...")
-            ExecutorCapabilities.Method = "Camera Snap (Fallback)"
-            success = SetupCameraSnap()
-        end
-    else
-        -- Use low-level method
-        success = SetupCameraSnap()
-    end
-    
-    if success then
-        print("[Silent Aim] ✅ Silent Aim initialized successfully!")
-        print("[Silent Aim] Method: " .. ExecutorCapabilities.Method)
-        print("[Silent Aim] Executor Level: " .. ExecutorCapabilities.Level)
-        SilentAim.Active = true
-    else
-        warn("[Silent Aim] ❌ Failed to initialize silent aim")
-    end
-    
-    return success
+    return true
 end
 
 -- ========================================
 -- CONTROL FUNCTIONS
 -- ========================================
 
-function SilentAim.Enable()
-    _G.QuantumSettings.SilentAim.Enabled = true
-    print("[Silent Aim] ✅ Silent Aim enabled")
-end
-
-function SilentAim.Disable()
-    _G.QuantumSettings.SilentAim.Enabled = false
-    print("[Silent Aim] ⭕ Silent Aim disabled")
-end
-
-function SilentAim.Toggle()
-    _G.QuantumSettings.SilentAim.Enabled = not _G.QuantumSettings.SilentAim.Enabled
-    if _G.QuantumSettings.SilentAim.Enabled then
-        print("[Silent Aim] ✅ Silent Aim enabled")
-    else
-        print("[Silent Aim] ⭕ Silent Aim disabled")
-    end
-end
-
 function SilentAim.GetStatus()
     return {
         Active = SilentAim.Active,
         Enabled = _G.QuantumSettings.SilentAim.Enabled,
-        Method = ExecutorCapabilities.Method,
-        Level = ExecutorCapabilities.Level,
-        SupportsHooking = ExecutorCapabilities.HasNamecallHook
+        CurrentMethod = SilentAim.CurrentMethod,
+        HookInstalled = SilentAim.HookInstalled,
+        CameraSnapActive = SilentAim.CameraSnapActive,
+        ExecutorLevel = ExecutorCapabilities.Level,
+        CanHook = ExecutorCapabilities.CanHook
     }
 end
 
-function SilentAim.Unload()
-    print("[Silent Aim] Unloading...")
-    
-    -- Restore namecall hook
-    if OldNamecall then
-        local mt = getrawmetatable(game)
-        setreadonly(mt, false)
-        mt.__namecall = OldNamecall
-        setreadonly(mt, true)
-        print("[Silent Aim] ✅ Namecall hook restored")
-    end
-    
-    -- Disconnect camera snap
-    if CameraSnap.Connection then
-        CameraSnap.Connection:Disconnect()
-        CameraSnap.Connection = nil
-        print("[Silent Aim] ✅ Camera snap disconnected")
-    end
-    
-    print("[Silent Aim] ✅ Silent Aim unloaded")
-end
-
--- ========================================
--- DEBUG FUNCTIONS
--- ========================================
-
 function SilentAim.Debug()
+    local status = SilentAim.GetStatus()
     print("========================================")
-    print("  SILENT AIM DEBUG INFO")
+    print("  SILENT AIM DEBUG")
     print("========================================")
-    print("Executor Level: " .. ExecutorCapabilities.Level)
-    print("Method: " .. ExecutorCapabilities.Method)
-    print("Has Namecall Hook: " .. tostring(ExecutorCapabilities.HasNamecallHook))
-    print("Active: " .. tostring(SilentAim.Active))
-    print("Enabled: " .. tostring(_G.QuantumSettings.SilentAim.Enabled))
-    print("Camera Snapping: " .. tostring(CameraSnap.IsSnapping))
+    print("Enabled: " .. tostring(status.Enabled))
+    print("Current Method: " .. status.CurrentMethod)
+    print("Hook Installed: " .. tostring(status.HookInstalled))
+    print("Camera Snap Active: " .. tostring(status.CameraSnapActive))
+    print("Executor Level: " .. status.ExecutorLevel)
+    print("Can Hook: " .. tostring(status.CanHook))
     
     local target = GetTarget()
     if target then
         print("Current Target: " .. target.Player.Name)
-        print("Target Part: " .. tostring(target.Part))
     else
         print("Current Target: None")
     end
     print("========================================")
 end
 
+function SilentAim.Unload()
+    RemoveNamecallHook()
+    RemoveCameraSnap()
+    SilentAim.Active = false
+    print("[Silent Aim] ✅ Unloaded")
+end
+
 -- ========================================
 -- AUTO-INITIALIZE
 -- ========================================
 
--- Auto-initialize when loaded
-print("[Silent Aim] Module loaded, waiting for dependencies...")
-
--- Wait for dependencies
 task.spawn(function()
     local attempts = 0
     while not _G.QuantumPlayerPool or not _G.QuantumHelpers do
         task.wait(0.5)
         attempts = attempts + 1
-        
         if attempts > 10 then
             warn("[Silent Aim] ❌ Timeout waiting for dependencies")
             return
         end
     end
     
-    -- Initialize after dependencies are ready
     task.wait(1)
     SilentAim.Initialize()
 end)
 
-print("[Silent Aim] ✅ Module ready")
-print("[Silent Aim] Use _G.QuantumSilentAim.Debug() for info")
-print("[Silent Aim] Use _G.QuantumSilentAim.Toggle() to control")
+print("[Silent Aim] ✅ Module loaded")
+print("[Silent Aim] Use _G.QuantumSilentAim.Debug() for status")
