@@ -52,6 +52,7 @@ _G.QuantumSettings = {
         Names = true,
         Distance = false,
         Health = true,
+        ShowHealthText = false,
         Tracers = false,
         TeamCheck = false,
         BoxColor = Color3.fromRGB(255, 255, 255),

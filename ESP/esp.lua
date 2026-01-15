@@ -25,6 +25,16 @@ function _G.QuantumESP.Initialize()
         return false
     end
     
+    -- Check for Name module (optional)
+    if _G.QuantumNameESP then
+        print("[ESP] Name ESP module loaded")
+    end
+    
+    -- Check for Skeleton module (optional)
+    if _G.QuantumSkeletonESP then
+        print("[ESP] Skeleton ESP module loaded")
+    end
+    
     print("[ESP] ESP system initialized successfully")
     print("[ESP] Update rate: Every " .. _G.QuantumESP.UpdateRate .. " frames")
     return true
@@ -74,6 +84,12 @@ function _G.QuantumESP.Stop()
     if _G.QuantumBoxESP then
         _G.QuantumBoxESP.ClearAll()
     end
+    if _G.QuantumNameESP then
+        _G.QuantumNameESP.ClearAll()
+    end
+    if _G.QuantumSkeletonESP then
+        _G.QuantumSkeletonESP.ClearAll()
+    end
     
     print("[ESP] ESP stopped")
 end
@@ -105,10 +121,38 @@ function _G.QuantumESP.Update()
                     _G.QuantumBoxESP.Remove(playerData.Player)
                 end
             end
+            
+            -- Draw Name ESP
+            if _G.QuantumSettings.ESP.Names or _G.QuantumSettings.ESP.Distance then
+                if _G.QuantumNameESP then
+                    _G.QuantumNameESP.Draw(playerData)
+                end
+            else
+                if _G.QuantumNameESP then
+                    _G.QuantumNameESP.Remove(playerData.Player)
+                end
+            end
+            
+            -- Draw Skeleton ESP
+            if _G.QuantumSettings.ESP.Skeleton then
+                if _G.QuantumSkeletonESP then
+                    _G.QuantumSkeletonESP.Draw(playerData)
+                end
+            else
+                if _G.QuantumSkeletonESP then
+                    _G.QuantumSkeletonESP.Remove(playerData.Player)
+                end
+            end
         else
             -- Remove ESP if player is invalid or doesn't pass checks
             if _G.QuantumBoxESP and playerData and playerData.Player then
                 _G.QuantumBoxESP.Remove(playerData.Player)
+            end
+            if _G.QuantumNameESP and playerData and playerData.Player then
+                _G.QuantumNameESP.Remove(playerData.Player)
+            end
+            if _G.QuantumSkeletonESP and playerData and playerData.Player then
+                _G.QuantumSkeletonESP.Remove(playerData.Player)
             end
         end
     end
@@ -116,6 +160,12 @@ function _G.QuantumESP.Update()
     -- Clean up ESP for players no longer in pool
     if _G.QuantumBoxESP then
         _G.QuantumBoxESP.CleanupInvalid(players)
+    end
+    if _G.QuantumNameESP then
+        _G.QuantumNameESP.CleanupInvalid(players)
+    end
+    if _G.QuantumSkeletonESP then
+        _G.QuantumSkeletonESP.CleanupInvalid(players)
     end
 end
 
