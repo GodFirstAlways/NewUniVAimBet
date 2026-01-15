@@ -30,7 +30,7 @@ task.wait(0.3)
 
 -- Load Silent Aim
 print("[5/7] Loading Silent Aim...")
-loadstring(game:HttpGet(repo .. "features/silentaim.lua?v=" .. tick()))()
+loadstring(game:HttpGet(repo .. "features/SilentAim.lua?v=" .. tick()))()
 task.wait(0.2)
 
 -- Load aimbot features (commented out until created)
