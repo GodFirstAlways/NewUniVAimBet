@@ -1,4 +1,4 @@
--- Player Pool Manager - OPTIMIZED
+-- Player Pool Manager - OPTIMIZED (FIXED SORTING)
 -- Centralized player tracking with performance improvements
 
 local Players = game:GetService("Players")
@@ -11,8 +11,8 @@ local Camera = Workspace.CurrentCamera
 _G.QuantumPlayerPool = {}
 
 -- Performance settings
-local VisibilityCheckInterval = 5  -- Check visibility every 5 frames (not every frame!)
-local VisibilityCache = {}  -- Cache visibility results
+local VisibilityCheckInterval = 5
+local VisibilityCache = {}
 
 -- Player data structure
 local function CreatePlayerData(player, frameCount)
@@ -26,7 +26,6 @@ local function CreatePlayerData(player, frameCount)
     if not humanoid or not rootPart or not head then return nil end
     if humanoid.Health <= 0 then return nil end
     
-    -- Get all body parts
     local parts = {
         Head = head,
         HumanoidRootPart = rootPart,
@@ -38,15 +37,12 @@ local function CreatePlayerData(player, frameCount)
         RightUpperLeg = character:FindFirstChild("RightUpperLeg") or character:FindFirstChild("Right Leg"),
     }
     
-    -- Calculate screen position
     local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
     local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
     local legPos = Camera:WorldToViewportPoint(rootPart.Position - Vector3.new(0, 3, 0))
     
-    -- Calculate distance
     local distance = (rootPart.Position - Camera.CFrame.Position).Magnitude
     
-    -- Visibility check (CACHED - only run every X frames)
     local isVisible = false
     if not VisibilityCache[player] or (frameCount % VisibilityCheckInterval == 0) then
         local ray = Ray.new(Camera.CFrame.Position, (rootPart.Position - Camera.CFrame.Position).Unit * distance)
@@ -56,83 +52,56 @@ local function CreatePlayerData(player, frameCount)
             isVisible = true
         end
         
-        -- Cache result
         VisibilityCache[player] = isVisible
     else
-        -- Use cached result
         isVisible = VisibilityCache[player]
     end
     
-    -- Calculate velocity for prediction
     local velocity = rootPart.AssemblyLinearVelocity or rootPart.Velocity
     
-    -- Get team info
     local isTeammate = false
     if LocalPlayer.Team and player.Team then
         isTeammate = (LocalPlayer.Team == player.Team)
     end
     
-    -- Box dimensions for ESP
     local boxHeight = math.abs(headPos.Y - legPos.Y)
     local boxWidth = boxHeight / 2
     
-    -- Create player data object
     return {
-        -- Player info
         Player = player,
         Name = player.Name,
         DisplayName = player.DisplayName,
         UserId = player.UserId,
         Team = player.Team,
         TeamColor = player.TeamColor,
-        
-        -- Character references
         Character = character,
         Humanoid = humanoid,
         RootPart = rootPart,
         Head = head,
         Parts = parts,
-        
-        -- Health info
         Health = humanoid.Health,
         MaxHealth = humanoid.MaxHealth,
         HealthPercent = humanoid.Health / humanoid.MaxHealth,
-        
-        -- Position data
         Position = rootPart.Position,
         CFrame = rootPart.CFrame,
         Velocity = velocity,
         Speed = velocity.Magnitude,
-        
-        -- Screen data
         ScreenPosition = Vector2.new(screenPos.X, screenPos.Y),
         OnScreen = onScreen,
         HeadScreenPos = Vector2.new(headPos.X, headPos.Y),
         LegScreenPos = Vector2.new(legPos.X, legPos.Y),
-        
-        -- Box dimensions
         BoxWidth = boxWidth,
         BoxHeight = boxHeight,
         BoxPosition = Vector2.new(screenPos.X, screenPos.Y),
-        
-        -- Distance
         Distance = distance,
         DistanceFormatted = math.floor(distance) .. "m",
-        
-        -- Visibility (CACHED)
         IsVisible = isVisible,
         BehindWall = not isVisible,
-        
-        -- Team info
         IsTeammate = isTeammate,
         IsEnemy = not isTeammate,
-        
-        -- Mouse/Camera data
-        DistanceFromMouse = nil,
-        DistanceFromCenter = nil,
-        AngleFromCamera = nil,
-        
-        -- Timestamp
+        DistanceFromMouse = 0,
+        DistanceFromCenter = 0,
+        AngleFromCamera = 0,
         LastUpdate = tick()
     }
 end
@@ -145,13 +114,9 @@ local function CalculateAimData(playerData)
     local mousePos = Vector2.new(mouse.X, mouse.Y)
     local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     
-    -- Distance from mouse cursor
     playerData.DistanceFromMouse = (mousePos - playerData.ScreenPosition).Magnitude
-    
-    -- Distance from screen center (crosshair)
     playerData.DistanceFromCenter = (screenCenter - playerData.ScreenPosition).Magnitude
     
-    -- Angle from camera
     local cameraLook = Camera.CFrame.LookVector
     local targetDirection = (playerData.Position - Camera.CFrame.Position).Unit
     playerData.AngleFromCamera = math.deg(math.acos(cameraLook:Dot(targetDirection)))
@@ -159,7 +124,6 @@ local function CalculateAimData(playerData)
     return playerData
 end
 
--- Main update function with frame counter
 local frameCount = 0
 local function UpdatePlayerPool()
     frameCount = frameCount + 1
@@ -175,14 +139,12 @@ local function UpdatePlayerPool()
         end
     end
     
-    -- Sort by distance (closest first)
     table.sort(pool, function(a, b)
         return a.Distance < b.Distance
     end)
     
     _G.QuantumPlayerPool = pool
     
-    -- Clean visibility cache every 100 frames
     if frameCount % 100 == 0 then
         for player, _ in pairs(VisibilityCache) do
             if not Players:FindFirstChild(player.Name) then
@@ -192,41 +154,34 @@ local function UpdatePlayerPool()
     end
 end
 
--- Update every frame (but raycasts are cached)
 RunService.RenderStepped:Connect(UpdatePlayerPool)
 
--- Helper functions for modules to use
+-- Helper functions
 _G.QuantumHelpers = {
-    -- Get all valid players
     GetAllPlayers = function()
         return _G.QuantumPlayerPool
     end,
     
-    -- Get players filtered by settings
     GetFilteredPlayers = function(settings)
         local filtered = {}
         
         for _, playerData in ipairs(_G.QuantumPlayerPool) do
             local valid = true
             
-            -- Team check
             if settings.TeamCheck and playerData.IsTeammate then
                 valid = false
             end
             
-            -- Visible check
             if settings.VisibleCheck and not playerData.IsVisible then
                 valid = false
             end
             
-            -- FOV check
             if settings.FOV and playerData.DistanceFromMouse then
                 if playerData.DistanceFromMouse > settings.FOV then
                     valid = false
                 end
             end
             
-            -- Distance check
             if settings.MaxDistance and playerData.Distance > settings.MaxDistance then
                 valid = false
             end
@@ -239,33 +194,32 @@ _G.QuantumHelpers = {
         return filtered
     end,
     
-    -- Get closest player to mouse
     GetClosestToMouse = function(settings)
         local filtered = _G.QuantumHelpers.GetFilteredPlayers(settings or {})
-        
         if #filtered == 0 then return nil end
         
         table.sort(filtered, function(a, b)
-            return a.DistanceFromMouse < b.DistanceFromMouse
+            local distA = a.DistanceFromMouse or 9999999
+            local distB = b.DistanceFromMouse or 9999999
+            return distA < distB
         end)
         
         return filtered[1]
     end,
     
-    -- Get closest player to crosshair/center
     GetClosestToCenter = function(settings)
         local filtered = _G.QuantumHelpers.GetFilteredPlayers(settings or {})
-        
         if #filtered == 0 then return nil end
         
         table.sort(filtered, function(a, b)
-            return a.DistanceFromCenter < b.DistanceFromCenter
+            local distA = a.DistanceFromCenter or 9999999
+            local distB = b.DistanceFromCenter or 9999999
+            return distA < distB
         end)
         
         return filtered[1]
     end,
     
-    -- Get player by name
     GetPlayerByName = function(name)
         for _, playerData in ipairs(_G.QuantumPlayerPool) do
             if playerData.Name == name or playerData.DisplayName == name then
@@ -275,7 +229,6 @@ _G.QuantumHelpers = {
         return nil
     end,
     
-    -- Get only visible players
     GetVisiblePlayers = function()
         local visible = {}
         for _, playerData in ipairs(_G.QuantumPlayerPool) do
@@ -286,7 +239,6 @@ _G.QuantumHelpers = {
         return visible
     end,
     
-    -- Get only enemies
     GetEnemies = function()
         local enemies = {}
         for _, playerData in ipairs(_G.QuantumPlayerPool) do
@@ -297,7 +249,6 @@ _G.QuantumHelpers = {
         return enemies
     end,
     
-    -- Get players in FOV
     GetPlayersInFOV = function(fov)
         local inFOV = {}
         for _, playerData in ipairs(_G.QuantumPlayerPool) do
@@ -309,7 +260,4 @@ _G.QuantumHelpers = {
     end,
 }
 
-print("[Quantum] OPTIMIZED Player Pool initialized")
-print("[Quantum] Raycasts cached every " .. VisibilityCheckInterval .. " frames")
-print("[Quantum] Use _G.QuantumPlayerPool to access player data")
-print("[Quantum] Use _G.QuantumHelpers for filtering functions")
+print("[Quantum] Player Pool initialized")

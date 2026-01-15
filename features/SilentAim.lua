@@ -76,6 +76,7 @@ local function GetTarget()
     
     local target = _G.QuantumHelpers.GetClosestToCenter(filterSettings)
     if not target then return nil end
+    if not target.DistanceFromCenter then return nil end
     
     local targetPart = target.Parts[settings.AimPart] or target.Head
     if not targetPart then return nil end
@@ -449,5 +450,5 @@ task.spawn(function()
     SilentAim.Initialize()
 end)
 
-print("[Silent Aim] ✅ COCK loaded")
+print("[Silent Aim] ✅ dicvl loaded")
 print("[Silent Aim] Use _G.QuantumSilentAim.Debug() for status")
