@@ -449,5 +449,5 @@ task.spawn(function()
     SilentAim.Initialize()
 end)
 
-print("[Silent Aim] ✅ Module loaded")
+print("[Silent Aim] ✅ COCK loaded")
 print("[Silent Aim] Use _G.QuantumSilentAim.Debug() for status")
